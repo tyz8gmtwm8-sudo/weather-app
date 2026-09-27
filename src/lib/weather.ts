@@ -75,11 +75,12 @@ type OwmForecast = {
 
 /** API のエラーを表すクラス（HTTP ステータスも一緒に持つ） */
 export class WeatherApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
+  // ※ constructor(public status) という省略記法は Node.js で直接実行できないため、この書き方にしています
+  status: number;
+
+  constructor(message: string, status: number) {
     super(message);
+    this.status = status;
   }
 }
 

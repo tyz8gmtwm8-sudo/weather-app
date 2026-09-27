@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  毎朝8時に天気を通知するための launchd（Mac の自動実行）の設定ファイルです。
+  ~/Library/LaunchAgents にコピーして使います。
+-->
+<plist version="1.0">
+<dict>
+  <!-- この設定の名前（ほかと重ならなければ何でもよい） -->
+  <key>Label</key>
+  <string>com.weatherapp.morning-notify</string>
+
+  <!-- 実行するコマンド（自動実行では場所を省略できないので、フルパスで書きます） -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>--disable-warning=MODULE_TYPELESS_PACKAGE_JSON</string>
+    <string>/Users/tsuboiseina/天気予報/weather-app/scripts/notify-weather.ts</string>
+  </array>
+
+  <!-- 実行する時刻：毎日 8時0分 -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>8</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <!-- 実行結果の記録（ログ）を保存する場所 -->
+  <key>StandardOutPath</key>
+  <string>/Users/tsuboiseina/Library/Logs/weather-notify.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/tsuboiseina/Library/Logs/weather-notify.log</string>
+</dict>
+</plist>
