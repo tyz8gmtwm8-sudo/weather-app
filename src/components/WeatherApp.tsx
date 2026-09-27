@@ -66,10 +66,20 @@ export default function WeatherApp() {
     navigator.geolocation.getCurrentPosition(
       (pos) =>
         loadWeather({ lat: String(pos.coords.latitude), lon: String(pos.coords.longitude) }),
-      () => {
+      (err) => {
         setLoading(false);
-        setError("位置情報を取得できませんでした（ブラウザで位置情報の利用を許可してください）");
+        // 失敗の理由ごとに、何をすればいいか分かるメッセージを出します
+        if (err.code === err.PERMISSION_DENIED) {
+          setError("位置情報の利用が許可されていません（ブラウザと、Macの「システム設定」→「プライバシーとセキュリティ」→「位置情報サービス」で許可してください）");
+        } else if (err.code === err.TIMEOUT) {
+          setError("位置情報の取得が時間切れになりました。もう一度お試しください");
+        } else {
+          setError("現在地を特定できませんでした（Wi-Fi がオンになっているか確認してください）");
+        }
       },
+      // timeout: 10秒で打ち切る（指定しないと、いつまでも待ち続けることがあります）
+      // maximumAge: 5分以内に取得した位置があれば、それを使って素早く表示します
+      { timeout: 10000, maximumAge: 5 * 60 * 1000 },
     );
   }
 

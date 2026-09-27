@@ -120,9 +120,20 @@ async function fetchOwm<T>(endpoint: string, query: LocationQuery): Promise<T> {
   }
 
   // 10分間はキャッシュして、API の無料枠を使いすぎないようにします
-  const res = await fetch(`${BASE_URL}/${endpoint}?${params}`, {
-    next: { revalidate: 600 },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/${endpoint}?${params}`, {
+      next: { revalidate: 600 },
+    });
+  } catch (err) {
+    // 通信そのものが失敗した場合（ネットワークの不調など）
+    // 原因を調べられるよう、詳しい理由 (cause) をサーバーのログに残します（API キーは出しません）
+    console.error(`OpenWeatherMap への接続に失敗: ${endpoint}`, JSON.stringify(query), err, (err as Error).cause);
+    throw new WeatherApiError(
+      "天気サービスに接続できませんでした。インターネット接続を確認して、もう一度お試しください",
+      502,
+    );
+  }
 
   if (!res.ok) {
     if (res.status === 404) throw new WeatherApiError("都市が見つかりませんでした", 404);
