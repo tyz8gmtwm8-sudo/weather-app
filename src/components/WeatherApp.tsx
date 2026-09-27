@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import Calendar from "@/components/Calendar";
 import type { DailyForecast, WeatherResponse } from "@/lib/weather";
+import { getClothingAdvice } from "@/lib/clothing";
 
 /** 天気アイコンの画像URL（OpenWeatherMap が提供している画像） */
 const iconUrl = (icon: string) => `https://openweathermap.org/img/wn/${icon}@2x.png`;
@@ -175,6 +176,8 @@ function DayDetail({ day }: { day: DailyForecast }) {
         <Stat label="湿度（平均）" value={`${day.humidity}%`} />
       </div>
 
+      <ClothingCard day={day} />
+
       <h4 className="mb-2 text-sm font-medium text-slate-500">3時間ごとの予報</h4>
       <div className="flex gap-2 overflow-x-auto pb-2">
         {day.hourly.map((h) => (
@@ -191,6 +194,34 @@ function DayDetail({ day }: { day: DailyForecast }) {
         ))}
       </div>
     </section>
+  );
+}
+
+/** 気温に合わせた服装のアドバイス */
+function ClothingCard({ day }: { day: DailyForecast }) {
+  const advice = getClothingAdvice(day.tempMax, day.tempMin, day.pop);
+
+  return (
+    <div className="mb-5 rounded-xl bg-amber-50 p-4 dark:bg-slate-700">
+      <h4 className="mb-1 text-sm font-medium text-slate-500 dark:text-slate-300">👕 服装のめやす</h4>
+      <p className="text-lg font-semibold">
+        {advice.emoji} {advice.title}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {advice.items.map((item) => (
+          <span key={item} className="rounded-full bg-white px-3 py-1 text-sm shadow-sm dark:bg-slate-600">
+            {item}
+          </span>
+        ))}
+      </div>
+      {advice.tips.length > 0 && (
+        <ul className="mt-3 space-y-1 text-sm text-amber-800 dark:text-amber-200">
+          {advice.tips.map((tip) => (
+            <li key={tip}>💡 {tip}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
