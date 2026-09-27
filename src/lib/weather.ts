@@ -1,6 +1,9 @@
 // OpenWeatherMap API からデータを取得し、画面で使いやすい形に整えるファイルです。
 // ※ API キーを使うため、このファイルはサーバー側（API ルート）からのみ呼び出します。
 
+// ※ 毎朝の通知スクリプト（Node.js で直接実行）からも使うため、拡張子 .ts まで書いています
+import { getWarnings, type WeatherWarnings } from "./warnings.ts";
+
 const BASE_URL = "https://api.openweathermap.org/data/2.5";
 
 // ---------- 画面側でも使う型（データの形） ----------
@@ -43,6 +46,7 @@ export type WeatherResponse = {
   today: string; // 現地の今日の日付 "YYYY-MM-DD"
   current: CurrentWeather;
   daily: DailyForecast[];
+  warnings: WeatherWarnings; // 警報・注意報（日本国内のみ）
 };
 
 /** 場所の指定方法（都市名 または 緯度・経度） */
@@ -177,6 +181,9 @@ export async function getWeather(query: LocationQuery): Promise<WeatherResponse>
     fetchOwm<OwmForecast>("forecast", query), // 5日間・3時間ごとの予報（降水確率あり）
   ]);
 
+  // 天気データの緯度・経度を使って、その場所の警報・注意報を取得します
+  const warnings = await getWarnings(current.coord.lat, current.coord.lon);
+
   return {
     location: {
       name: current.name,
@@ -194,5 +201,6 @@ export async function getWeather(query: LocationQuery): Promise<WeatherResponse>
       icon: current.weather[0].icon,
     },
     daily: groupByDay(forecast),
+    warnings,
   };
 }

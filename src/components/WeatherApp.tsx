@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import Calendar from "@/components/Calendar";
 import type { DailyForecast, WeatherResponse } from "@/lib/weather";
 import { getClothingAdvice } from "@/lib/clothing";
+import type { WeatherWarnings } from "@/lib/warnings";
 
 /** 天気アイコンの画像URL（OpenWeatherMap が提供している画像） */
 const iconUrl = (icon: string) => `https://openweathermap.org/img/wn/${icon}@2x.png`;
@@ -115,6 +116,8 @@ export default function WeatherApp() {
             <span className="ml-2 text-base font-normal text-slate-500">{weather.location.country}</span>
           </h2>
 
+          <WarningsCard warnings={weather.warnings} />
+
           <div className="grid gap-6 md:grid-cols-[320px_1fr]">
             {/* 場所が変わったらカレンダーを作り直す（表示月をリセットする）ため key を指定 */}
             <Calendar
@@ -155,6 +158,12 @@ export default function WeatherApp() {
         <a href="https://openweathermap.org/" className="underline" target="_blank" rel="noreferrer">
           OpenWeatherMap
         </a>
+        <br />
+        警報・注意報: 出典{" "}
+        <a href="https://www.jma.go.jp/" className="underline" target="_blank" rel="noreferrer">
+          気象庁ホームページ
+        </a>
+        （市区町村の判定に国土地理院のデータを使用）
       </footer>
     </main>
   );
@@ -222,6 +231,83 @@ function ClothingCard({ day }: { day: DailyForecast }) {
         </ul>
       )}
     </div>
+  );
+}
+
+/** 危険度レベルごとの色（気象庁の警報ページの色分けに合わせています） */
+const LEVEL_STYLES: Record<number, string> = {
+  5: "bg-black text-white", // 特別警報
+  4: "bg-purple-600 text-white", // 危険警報
+  3: "bg-red-600 text-white", // 警報
+  2: "bg-yellow-300 text-yellow-950", // 注意報
+};
+
+/** "2026-09-27T16:17:00+09:00" → "9月27日 16:17" */
+function formatReportTime(iso: string) {
+  const [, m, d, time] = iso.match(/^\d{4}-(\d{2})-(\d{2})T(\d{2}:\d{2})/) ?? [];
+  return m ? `${Number(m)}月${Number(d)}日 ${time}` : iso;
+}
+
+/** 発表中の警報・注意報と、避難情報の確認方法 */
+function WarningsCard({ warnings }: { warnings: WeatherWarnings }) {
+  if (warnings.status === "outside-japan") {
+    return <p className="mb-6 text-sm text-slate-500">ℹ️ 警報・注意報は日本国内の地域のみ表示できます</p>;
+  }
+  if (warnings.status === "error") {
+    return <p className="mb-6 text-sm text-slate-500">⚠️ 警報・注意報を取得できませんでした</p>;
+  }
+
+  const hasWarnings = warnings.items.length > 0;
+
+  return (
+    <section
+      className={`mb-6 rounded-2xl p-5 shadow-sm ${
+        hasWarnings ? "border-2 border-red-400 bg-red-50 dark:bg-red-950/40" : "bg-white/80 dark:bg-slate-800/80"
+      }`}
+    >
+      <h3 className="mb-2 text-lg font-semibold">
+        {hasWarnings ? "⚠️" : "✅"} {warnings.areaName}の警報・注意報
+      </h3>
+
+      {hasWarnings ? (
+        <>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {warnings.items.map((item) => (
+              <span
+                key={item.code}
+                className={`rounded-lg px-3 py-1 text-sm font-semibold ${LEVEL_STYLES[item.level] ?? LEVEL_STYLES[2]}`}
+              >
+                {item.name}
+              </span>
+            ))}
+          </div>
+          {warnings.headlines.map((text) => (
+            <p key={text} className="mb-1 text-sm">
+              {text}
+            </p>
+          ))}
+        </>
+      ) : (
+        <p className="text-sm">現在、発表中の警報・注意報はありません。</p>
+      )}
+
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        {formatReportTime(warnings.reportDatetime)} 気象庁発表 ／{" "}
+        <a
+          href={`https://www.jma.go.jp/bosai/warning/#area_type=offices&area_code=${warnings.officeCode}`}
+          className="underline"
+          target="_blank"
+          rel="noreferrer"
+        >
+          気象庁のページで詳しく見る
+        </a>
+      </p>
+
+      {/* 避難指示は市区町村が発令するもので、無料で使える公開データがないため、確認先を案内します */}
+      <p className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+        🏃 避難指示などの避難情報は、市区町村から発令されます。テレビ・ラジオ、市区町村のホームページや防災メール・防災アプリで確認してください。
+      </p>
+    </section>
   );
 }
 
