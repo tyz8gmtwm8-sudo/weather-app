@@ -41,7 +41,7 @@ export default function Calendar({ availableDates, selectedDate, today, onSelect
   };
 
   return (
-    <div className="rounded-2xl bg-white/80 p-4 shadow-sm dark:bg-slate-800/80">
+    <div className="rounded-2xl bg-white/80 p-4 shadow-sm backdrop-blur-md dark:bg-slate-800/80">
       <div className="mb-3 flex items-center justify-between">
         <button
           type="button"

@@ -6,6 +6,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import Calendar from "@/components/Calendar";
+import WeatherBackground, { getWeatherTheme, THEMES, type WeatherTheme } from "@/components/WeatherBackground";
 import type { DailyForecast, WeatherResponse } from "@/lib/weather";
 import { getClothingAdvice } from "@/lib/clothing";
 import type { WeatherWarnings } from "@/lib/warnings";
@@ -44,10 +45,16 @@ export default function WeatherApp() {
     }
   }
 
+  // 背景のお試し表示用（URL の最後に ?theme=rain などを付けると、その天気の背景になります）
+  const [previewTheme, setPreviewTheme] = useState<WeatherTheme | null>(null);
+
   // 最初に画面を開いたときは東京の天気を表示します
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 初回だけデータを読み込むため
     loadWeather({ city: "Tokyo" });
+
+    const param = new URLSearchParams(window.location.search).get("theme");
+    if (param && param in THEMES) setPreviewTheme(param as WeatherTheme);
   }, []);
 
   /** 検索フォームの送信 */
@@ -86,104 +93,122 @@ export default function WeatherApp() {
 
   const day = weather?.daily.find((d) => d.date === selectedDate);
 
+  // 背景の種類を決めます
+  //   今日を選んでいるとき … 「現在の天気」と「風速」から
+  //   ほかの日を選んでいるとき … その日の代表の天気から（予報には風速がないため、風は判定しません）
+  let theme: WeatherTheme = "cloudy"; // 読み込み前は、くもりの背景
+  if (weather) {
+    theme =
+      selectedDate === weather.today || !day
+        ? getWeatherTheme(weather.current.icon, weather.current.windSpeed)
+        : getWeatherTheme(day.icon);
+  }
+  if (previewTheme) theme = previewTheme;
+  const themeStyle = THEMES[theme];
+
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold">🌤 天気予報</h1>
+    <>
+      <WeatherBackground theme={theme} />
+      {/* relative: 背景より手前に表示するため */}
+      <main className="relative mx-auto w-full max-w-5xl px-4 py-8">
+        <h1 className={`mb-6 text-3xl font-bold ${themeStyle.text}`}>🌤 天気予報</h1>
 
-      {/* 検索エリア */}
-      <form onSubmit={handleSearch} className="mb-6 flex flex-col gap-2 sm:flex-row">
-        <input
-          value={cityInput}
-          onChange={(e) => setCityInput(e.target.value)}
-          placeholder="都市名を入力（例: Osaka, 札幌, London）"
-          className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-900 outline-none focus:ring-2 focus:ring-sky-400"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-xl bg-sky-500 px-5 py-2 font-medium text-white hover:bg-sky-600 disabled:opacity-50"
-        >
-          検索
-        </button>
-        <button
-          type="button"
-          onClick={handleCurrentLocation}
-          disabled={loading}
-          className="rounded-xl border border-sky-500 px-5 py-2 font-medium text-sky-600 hover:bg-sky-50 disabled:opacity-50 dark:hover:bg-slate-800"
-        >
-          📍 現在地
-        </button>
-      </form>
+        {/* 検索エリア */}
+        <form onSubmit={handleSearch} className="mb-6 flex flex-col gap-2 sm:flex-row">
+          <input
+            value={cityInput}
+            onChange={(e) => setCityInput(e.target.value)}
+            placeholder="都市名を入力（例: Osaka, 札幌, London）"
+            className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-900 outline-none focus:ring-2 focus:ring-sky-400"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-xl bg-sky-500 px-5 py-2 font-medium text-white hover:bg-sky-600 disabled:opacity-50"
+          >
+            検索
+          </button>
+          <button
+            type="button"
+            onClick={handleCurrentLocation}
+            disabled={loading}
+            className="rounded-xl border border-sky-500 bg-white/80 px-5 py-2 font-medium text-sky-600 backdrop-blur-sm hover:bg-sky-50 disabled:opacity-50 dark:bg-slate-800/80 dark:hover:bg-slate-800"
+          >
+            📍 現在地
+          </button>
+        </form>
 
-      {error && (
-        <p className="mb-6 rounded-xl bg-red-100 px-4 py-3 text-red-700">⚠️ {error}</p>
-      )}
-      {loading && <p className="mb-6 text-slate-500">読み込み中...</p>}
+        {error && (
+          <p className="mb-6 rounded-xl bg-red-100 px-4 py-3 text-red-700">⚠️ {error}</p>
+        )}
+        {loading && <p className={`mb-6 ${themeStyle.text}`}>読み込み中...</p>}
 
-      {weather && (
-        <>
-          <h2 className="mb-4 text-2xl font-semibold">
-            {weather.location.name}
-            <span className="ml-2 text-base font-normal text-slate-500">{weather.location.country}</span>
-          </h2>
+        {weather && (
+          <>
+            <h2 className={`mb-4 text-2xl font-semibold ${themeStyle.text}`}>
+              {weather.location.name}
+              <span className="ml-2 text-base font-normal opacity-75">{weather.location.country}</span>
+            </h2>
 
-          <WarningsCard warnings={weather.warnings} />
+            <WarningsCard warnings={weather.warnings} />
 
-          <div className="grid gap-6 md:grid-cols-[320px_1fr]">
-            {/* 場所が変わったらカレンダーを作り直す（表示月をリセットする）ため key を指定 */}
-            <Calendar
-              key={`${weather.location.lat},${weather.location.lon}`}
-              availableDates={weather.daily.map((d) => d.date)}
-              selectedDate={selectedDate}
-              today={weather.today}
-              onSelect={setSelectedDate}
-            />
+            <div className="grid gap-6 md:grid-cols-[320px_1fr]">
+              {/* 場所が変わったらカレンダーを作り直す（表示月をリセットする）ため key を指定 */}
+              <Calendar
+                key={`${weather.location.lat},${weather.location.lon}`}
+                availableDates={weather.daily.map((d) => d.date)}
+                selectedDate={selectedDate}
+                today={weather.today}
+                onSelect={setSelectedDate}
+              />
 
-            <div className="flex flex-col gap-6">
-              {/* 今日を選んでいるときだけ「現在の天気」を表示 */}
-              {selectedDate === weather.today && (
-                <section className="rounded-2xl bg-gradient-to-br from-sky-400 to-blue-500 p-5 text-white shadow">
-                  <p className="text-sm opacity-90">現在の天気</p>
-                  <div className="flex items-center gap-2">
-                    <Image src={iconUrl(weather.current.icon)} alt={weather.current.description} width={80} height={80} />
-                    <div>
-                      <p className="text-5xl font-bold">{weather.current.temp}℃</p>
-                      <p>{weather.current.description}</p>
+              <div className="flex flex-col gap-6">
+                {/* 今日を選んでいるときだけ「現在の天気」を表示 */}
+                {selectedDate === weather.today && (
+                  <section className={`rounded-2xl bg-gradient-to-br p-5 text-white shadow-lg ${themeStyle.card}`}>
+                    <p className="text-sm opacity-90">現在の天気</p>
+                    <div className="flex items-center gap-2">
+                      <Image src={iconUrl(weather.current.icon)} alt={weather.current.description} width={80} height={80} />
+                      <div>
+                        <p className="text-5xl font-bold">{weather.current.temp}℃</p>
+                        <p>{weather.current.description}</p>
+                      </div>
                     </div>
-                  </div>
-                  <p className="mt-2 text-sm opacity-90">
-                    体感 {weather.current.feelsLike}℃ ／ 湿度 {weather.current.humidity}% ／ 風速{" "}
-                    {weather.current.windSpeed}m/s
-                  </p>
-                </section>
-              )}
+                    <p className="mt-2 text-sm opacity-90">
+                      体感 {weather.current.feelsLike}℃ ／ 湿度 {weather.current.humidity}% ／ 風速{" "}
+                      {weather.current.windSpeed}m/s
+                    </p>
+                  </section>
+                )}
 
-              {day ? <DayDetail day={day} /> : <p>この日の予報データはありません</p>}
+                {day ? <DayDetail day={day} /> : <p className={themeStyle.text}>この日の予報データはありません</p>}
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
 
-      <footer className="mt-10 text-xs text-slate-500">
-        天気データ提供:{" "}
-        <a href="https://openweathermap.org/" className="underline" target="_blank" rel="noreferrer">
-          OpenWeatherMap
-        </a>
-        <br />
-        警報・注意報: 出典{" "}
-        <a href="https://www.jma.go.jp/" className="underline" target="_blank" rel="noreferrer">
-          気象庁ホームページ
-        </a>
-        （市区町村の判定に国土地理院のデータを使用）
-      </footer>
-    </main>
+        {/* 背景の色に関係なく読めるように、半透明の白い下地を敷いています */}
+        <footer className="mt-10 rounded-xl bg-white/70 px-4 py-3 text-xs text-slate-600 backdrop-blur-sm dark:bg-slate-900/70 dark:text-slate-300">
+          天気データ提供:{" "}
+          <a href="https://openweathermap.org/" className="underline" target="_blank" rel="noreferrer">
+            OpenWeatherMap
+          </a>
+          <br />
+          警報・注意報: 出典{" "}
+          <a href="https://www.jma.go.jp/" className="underline" target="_blank" rel="noreferrer">
+            気象庁ホームページ
+          </a>
+          （市区町村の判定に国土地理院のデータを使用）
+        </footer>
+      </main>
+    </>
   );
 }
 
 /** 選択した日の予報（1日のまとめ ＋ 3時間ごと） */
 function DayDetail({ day }: { day: DailyForecast }) {
   return (
-    <section className="rounded-2xl bg-white/80 p-5 shadow-sm dark:bg-slate-800/80">
+    <section className="rounded-2xl bg-white/80 p-5 shadow-sm backdrop-blur-md dark:bg-slate-800/80">
       <h3 className="mb-3 text-lg font-semibold">{formatDate(day.date)} の予報</h3>
 
       <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -262,10 +287,10 @@ function formatReportTime(iso: string) {
 /** 発表中の警報・注意報と、避難情報の確認方法 */
 function WarningsCard({ warnings }: { warnings: WeatherWarnings }) {
   if (warnings.status === "outside-japan") {
-    return <p className="mb-6 text-sm text-slate-500">ℹ️ 警報・注意報は日本国内の地域のみ表示できます</p>;
+    return <p className="mb-6 rounded-xl bg-white/70 px-4 py-2 text-sm text-slate-600 backdrop-blur-sm dark:bg-slate-800/70 dark:text-slate-300">ℹ️ 警報・注意報は日本国内の地域のみ表示できます</p>;
   }
   if (warnings.status === "error") {
-    return <p className="mb-6 text-sm text-slate-500">⚠️ 警報・注意報を取得できませんでした</p>;
+    return <p className="mb-6 rounded-xl bg-white/70 px-4 py-2 text-sm text-slate-600 backdrop-blur-sm dark:bg-slate-800/70 dark:text-slate-300">⚠️ 警報・注意報を取得できませんでした</p>;
   }
 
   const hasWarnings = warnings.items.length > 0;
@@ -273,7 +298,7 @@ function WarningsCard({ warnings }: { warnings: WeatherWarnings }) {
   return (
     <section
       className={`mb-6 rounded-2xl p-5 shadow-sm ${
-        hasWarnings ? "border-2 border-red-400 bg-red-50 dark:bg-red-950/40" : "bg-white/80 dark:bg-slate-800/80"
+        hasWarnings ? "border-2 border-red-400 bg-red-50 dark:bg-red-950/40" : "bg-white/80 backdrop-blur-md dark:bg-slate-800/80"
       }`}
     >
       <h3 className="mb-2 text-lg font-semibold">

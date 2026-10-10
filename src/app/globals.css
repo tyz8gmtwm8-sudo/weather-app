@@ -24,3 +24,142 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* =========================================================
+   天気に合わせた背景アニメーション（WeatherBackground.tsx で使用）
+   「wx」は weather（天気）の略です。
+   ========================================================= */
+
+/* 天気が切り替わったとき、ふわっと表示する */
+.wx-fade { animation: wx-fade 1.2s ease-out; }
+@keyframes wx-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- 晴れ ---------- */
+/* 太陽（右上で光りながら、ゆっくり大きさが変わる） */
+.wx-sun {
+  position: absolute; top: -80px; right: -80px;
+  width: 320px; height: 320px; border-radius: 9999px;
+  background: radial-gradient(circle, #fffbea 0%, #ffd56b 35%, rgba(255, 170, 60, 0.6) 55%, rgba(255, 150, 50, 0) 70%);
+  animation: wx-pulse 6s ease-in-out infinite;
+}
+/* 太陽から広がる光の筋（ゆっくり回転する）。中心を太陽の中心に合わせています */
+.wx-sun-rays {
+  position: absolute; top: -280px; right: -280px;
+  width: 720px; height: 720px; border-radius: 9999px;
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.22) 0deg 6deg, transparent 6deg 18deg);
+  mask-image: radial-gradient(circle, black 20%, transparent 70%);
+  animation: wx-spin 80s linear infinite;
+}
+/* ふわふわ浮かぶ光の粒 */
+.wx-flare {
+  position: absolute; border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 70%);
+  animation: wx-float-up linear infinite;
+}
+@keyframes wx-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes wx-spin { to { transform: rotate(360deg); } }
+@keyframes wx-float-up {
+  0% { transform: translateY(15vh); opacity: 0; }
+  20%, 80% { opacity: 1; }
+  100% { transform: translateY(-25vh); opacity: 0; }
+}
+
+/* ---------- 晴れの夜 ---------- */
+/* 三日月（内側の影を使って、丸から三日月の形を作っています） */
+.wx-moon {
+  position: absolute; top: 60px; right: 80px;
+  width: 90px; height: 90px; border-radius: 9999px;
+  box-shadow: inset -20px 10px 0 0 #fef3c7;
+  filter: drop-shadow(0 0 20px rgba(254, 243, 199, 0.6));
+}
+.wx-star {
+  position: absolute; width: 2px; height: 2px; border-radius: 9999px;
+  background: white;
+  animation: wx-twinkle ease-in-out infinite;
+}
+@keyframes wx-twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+
+/* ---------- 雲（くもり・雨・風で共通） ---------- */
+.wx-cloud {
+  position: absolute; left: 0; border-radius: 9999px;
+  filter: blur(24px);
+  animation: wx-drift linear infinite;
+}
+@keyframes wx-drift { from { transform: translateX(-60vw); } to { transform: translateX(130vw); } }
+
+/* ---------- 雨・雷雨 ---------- */
+/* 雨粒（細い線を少し傾けて、左下へ落とす） */
+.wx-drop {
+  position: absolute; top: -15vh; width: 2px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.7));
+  animation: wx-fall linear infinite;
+}
+@keyframes wx-fall {
+  from { transform: translate(0, 0) rotate(12deg); }
+  to { transform: translate(-25vh, 125vh) rotate(12deg); }
+}
+/* 雷の光（たまに画面全体が白く光る） */
+.wx-flash {
+  position: absolute; inset: 0; background: white; opacity: 0;
+  animation: wx-flash 8s infinite;
+}
+@keyframes wx-flash {
+  0%, 88%, 100% { opacity: 0; }
+  89% { opacity: 0.6; }
+  90% { opacity: 0.1; }
+  91.5% { opacity: 0.45; }
+  93% { opacity: 0; }
+}
+
+/* ---------- 雪 ---------- */
+.wx-flake {
+  position: absolute; top: -5vh; border-radius: 9999px;
+  background: white;
+  animation: wx-snow linear infinite;
+}
+@keyframes wx-snow {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(4vw, 55vh); }
+  100% { transform: translate(-2vw, 110vh); }
+}
+
+/* ---------- 霧 ---------- */
+.wx-fog {
+  position: absolute; left: -50%; width: 200%; height: 30vh;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
+  filter: blur(30px);
+  animation: wx-fog ease-in-out infinite alternate;
+}
+@keyframes wx-fog { from { transform: translateX(-12%); } to { transform: translateX(12%); } }
+
+/* ---------- 強い風 ---------- */
+/* 横切る風の線 */
+.wx-gust {
+  position: absolute; left: 0; height: 2px; border-radius: 9999px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
+  animation: wx-gust ease-in-out infinite;
+}
+@keyframes wx-gust {
+  0% { transform: translateX(-50vw); opacity: 0; }
+  15%, 85% { opacity: 1; }
+  100% { transform: translateX(150vw); opacity: 0; }
+}
+/* くるくる回りながら飛んでいく葉っぱ */
+.wx-leaf {
+  position: absolute; left: 0; font-size: 24px;
+  animation: wx-leaf linear infinite;
+}
+@keyframes wx-leaf {
+  0% { transform: translate(-10vw, 0) rotate(0deg); }
+  25% { transform: translate(25vw, -6vh) rotate(180deg); }
+  50% { transform: translate(55vw, 4vh) rotate(360deg); }
+  75% { transform: translate(85vw, -4vh) rotate(540deg); }
+  100% { transform: translate(115vw, 2vh) rotate(720deg); }
+}
+
+/* パソコンの設定で「視差効果を減らす（動きを減らす）」をオンにしている人には、
+   動きを止めて、雷の点滅や落ちてくる粒も表示しません（目や体への負担を減らすため） */
+@media (prefers-reduced-motion: reduce) {
+  .wx-layer * { animation: none !important; }
+  .wx-flash, .wx-drop, .wx-flake, .wx-gust, .wx-leaf, .wx-flare { display: none; }
+}
